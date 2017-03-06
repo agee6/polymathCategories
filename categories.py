@@ -1,7 +1,8 @@
 import sys
 import sqlite3
 import requests
-import pdb
+import os
+import xml.etree.ElementTree as ET
 header = {
 'X-EBAY-API-CALL-NAME' : 'GetCategories',
 'X-EBAY-API-APP-NAME' : 'EchoBay62-5538-466c-b43b-662768d6841',
@@ -20,29 +21,99 @@ xml = """<?xml version='1.0' encoding='utf-'?>
 </GetCategoriesRequest>"""
 database = "./eb_db.sqlite"
 url = "https://api.sandbox.ebay.com/ws/api.dll"
-print(sys.argv)
-table_name = 'my_table'
-new_field = 'my_1st_column'
-field_type = 'INTEGER'
-table_name2 = 'my_table2'
-
-r = requests.post(url, data=xml, headers=header)
-array = r.text.split("/CategoryID")
-
-print(array[2])
-
-
 
 def makeDatabase():
+    lead = "{urn:ebay:apis:eBLBaseComponents}"
+    r = requests.post(url, data=xml, headers=header)
+    root = ET.fromstring(r.text)
+    category_array = root.find(lead + "CategoryArray")
+    if(os.path.isfile(database)):
+        os.remove(database)
     conn = sqlite3.connect(database)
     c = conn.cursor()
-    c.execute('CREATE TABLE {tn} ({nf} {ft})'\
-        .format(tn=table_name, nf=new_field, ft=field_type))
-    c.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY KEY)'\
-        .format(tn=table_name2, nf=new_field, ft=field_type))
+    c.execute('CREATE TABLE {tn} (CategoryID INT, CategoryName TEXT, CategoryLevel INT, BestOfferEnabled INT, CategoryParentID INT )'\
+    .format(tn="main"))
+    c.execute('CREATE INDEX CategoryIndex ON {tn} ({cn})'\
+    .format(tn="main", cn="CategoryID"))
+    for child in category_array:
+        ID = int(child.find(lead + "CategoryID").text)
+        Name = child.find(lead + "CategoryName").text
+        Level = int(child.find(lead + "CategoryLevel").text)
+        if(child.find(lead + "BestOfferEnabled")):
+            BOEnabledB = child.find(lead + "BestOfferEnabled").text
+        else:
+            BOEnabledB = False
+        ParentID = int(child.find(lead + "CategoryParentID").text)
+        if(BOEnabledB == 'true'):
+            BOEnabled = 1
+        else:
+            BOEnabled = 0
+        vals = (ID, Name, Level, BOEnabled, ParentID)
+        c.execute("INSERT INTO main(CategoryID, CategoryName, CategoryLevel, BestOfferEnabled, CategoryParentID) VALUES(?, ?, ?, ?, ?)", vals)
     conn.commit()
     conn.close()
+    print("database built successfully")
 
+def renderCategory(num):
+    html_header = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>category:{num}</title>
+        <link rel="stylesheet" href="style.css">
+      </head>
+      <body>
+        <h1 class='title'>Category Tree for number: {num}</h1>
+        <div class='container'>
+      """
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    num_list = (num)
+    c.execute("SELECT * FROM main WHERE CategoryID={the_id}"\
+    .format(the_id=num))
+    category_item_array = c.fetchall()
+    conn.close()
+    if(len(category_item_array) == 0):
+        print("No category with ID:" + str(num))
+        return
+    main_body = buildBody(category_item_array)
+    tail = """
+    </div>
+    </body>
+    </html>
+    """
+    final_html = html_header + main_body + tail
+    filename = str(num) + ".html"
+    html_file = open(filename, "w")
+    html_file.write(final_html)
+    html_file.close()
+
+def buildBody(arr):
+    if(len(arr) == 0):
+        return ""
+    html_string = "<ul>"
+    for ele in arr:
+        if(ele[3] == 1):
+            BestOfferEnabled = "true"
+        else:
+            BestOfferEnabled = "false"
+        list_item = f"""
+        <li><div class=list-item>
+            <h2>Category Name: {ele[1]}</h2>
+            <h4>Category ID: {ele[0]}</h4>
+            <h4>Category Level: {ele[2]}</h4>
+            <h4>Best Offer Enabled: {BestOfferEnabled}</h4>
+        """
+        conn = sqlite3.connect(database)
+        c = conn.cursor()
+        c.execute("SELECT * FROM main WHERE CategoryLevel={next_level} AND CategoryParentID={the_id}"\
+        .format(the_id=ele[0],next_level=ele[2] + 1))
+        category_item_array = c.fetchall()
+        conn.close()
+        html_string += list_item + buildBody(category_item_array) + "</div></li>"
+    html_string += "</ul>"
+    return html_string
 
 if(sys.argv[1]):
     if(sys.argv[1] == "--rebuild"):
