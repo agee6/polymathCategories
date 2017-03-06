@@ -88,6 +88,7 @@ def renderCategory(num):
     html_file = open(filename, "w")
     html_file.write(final_html)
     html_file.close()
+    print("successfully rendered html file. You may now open " + filename + "in your browser" ); 
 
 def buildBody(arr):
     if(len(arr) == 0):
