@@ -30,3 +30,10 @@ Error: invalid command
 ![screen shot][screen]
 
 [screen]: ScreenShot.png
+
+## Database:
+### the schema is a single table with five columns: "CategoryID", "CategoryName", "CategoryLevel", "BestOfferEnabled", and "Parent CategoryID".
+
+## Next steps
+
+#### If I were to put some more time into this I would do several things. One I would add some more pizzaz to the css. In particular I would make it somewhat like a drop down, that you could click on the items and have their children appear and disappear like a file tree in windows. Also right now I have a pretty basic schema. I believe I could make it faster by dividing things up into tables based on level, this would lead to small gains in render time, but a decrease in rebuild speed which is already the slowest aspect. Finally, possibly most important of all I would add a lot more checks and catches to cover for things going wrong. 

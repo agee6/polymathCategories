@@ -88,7 +88,7 @@ def renderCategory(num):
     html_file = open(filename, "w")
     html_file.write(final_html)
     html_file.close()
-    print("successfully rendered html file. You may now open " + filename + "in your browser" ); 
+    print("successfully rendered html file. You may now open " + filename + " in your browser" );
 
 def buildBody(arr):
     if(len(arr) == 0):
@@ -120,10 +120,13 @@ if(sys.argv[1]):
     if(sys.argv[1] == "--rebuild"):
         makeDatabase()
     elif(sys.argv[1] == "--render"):
-        if(sys.argv[2]):
-            renderCategory(sys.argv[2])
+        if(os.path.isfile(database)):
+            if(sys.argv[2]):
+                renderCategory(sys.argv[2])
+            else:
+                print("error: no categoryID entered")
         else:
-            print("error: no categoryID entered")
+            print("error: no database. Run '--rebuild' to continue")
     else:
         print("error: invalid argument")
 else:

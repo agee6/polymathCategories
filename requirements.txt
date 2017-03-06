@@ -1,0 +1,11 @@
+
+
+The script uses only one non standard python library: requests for making the HTTP requests
+
+I also use a few other libraries:
+
+sqlite3 to interact with the sql database,
+xml.etree.ElementTree to parse the xml (I could have done this on my own, but it seemed unnecessarily cumbersome to do so),
+os and sys to interact with the computer.
+
+Made on Mac, hopefully everything is fully compatable. 
